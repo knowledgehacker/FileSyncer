@@ -1,5 +1,5 @@
-FileSyncer is a small tool to synchronize the create/delete and change operations on the current directory to a specified remote server.
-This is an experimental release, it only monitor the operations for one minute. Have fun:-)
+FileSyncer is a small tool based on ssh to synchronize the create/delete and change operations on a directory to a specified remote server.
+This is an experimental release. Have fun:-)
 
 Constraints:
 1. Currently only support linux-to-linux.
