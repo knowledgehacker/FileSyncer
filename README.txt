@@ -6,8 +6,8 @@ Constraints:
 2. You need to generate private/public keys with name id_rsa/id_rda.pub in ~/.ssh/. And ensure the remote server has sshd service running.
 
 Usage:
-1. Extract FileSyncer.tar.gz to the directory you want to synchronize.
-tar jx FileSyncer.tar.gz -C directory_you_want_to_synchronize
+1. Extract FileSyncer.tar.gz.
+tar jx FileSyncer.tar.gz
 
 2. Run FileSyncer
-java -jar FileSyncer.jar user@server
+java -jar FileSyncer.jar directory_you_want_to_synchronize user@server
