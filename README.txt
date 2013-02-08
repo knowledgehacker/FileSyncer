@@ -7,7 +7,7 @@ Constraints:
 
 Usage:
 1. Extract FileSyncer.tar.gz.
-tar jx FileSyncer.tar.gz
+tar xf FileSyncer.tar.gz
 
 2. Run FileSyncer
 java -jar FileSyncer.jar directory_you_want_to_synchronize user@server
