@@ -1,0 +1,24 @@
+(1) Wrong usage: Use BufferedReader to read data firstly, then use the wrapped InputStream to read following data. Don't do that!!!
+Case: In initial implementation of SyncOpServlet.doPost, I wrapped InputStream is(req.getInputStream()) into BufferedReader ir in order to use  "readLine" method in BufferedReader. Then I use ir to read some data from the connection, including user name, and file type(indicate it is a directory
+or file), then I use the wrapped is to read the file content. But I found all the files read have about 15KB missing.
+
+The scenario can be described as the following code snippet:
+	InputStream is = req.getInputStream();
+	BufferedReader ir = new BufferedReader(new InputStreamReader(is));
+	String user = ir.readLine();
+	String type = ir.readLine();
+
+	...
+
+	byte[] buffer = new byte[bufferSize];
+	int bytesRead = is.read(buffer);
+
+The problem lies in the buffering mechanism used by BufferedReader. BufferedReader ir is a wrapper of InputStream is, so they share the same data pointer. BufferedReader ir reads data using buffer, so when it reads user and type from the connection, it reads extra characters which are stored in the buffer, and the data pointer points beyond the position following type, then when we read bytes using InputStream is, it will read from the 
+same position pointed by the data pointer, so the extra characters in the buffer are missing!!!
+
+(2) StringBuffer and StringBuilder
+StringBuffer and StringBuilder are companies to String, they represent mutable sequence of characters.
+StringBuffer is thread-safe. StringBuilder is designed for use as a drop-in replacement for StringBuffer in places where the string buffer was 
+being used by a single thread (as is generally the case). Where possible, it is recommended that this class be used in preference to StringBuffer 
+as it will be faster under most implementations. 
+
