@@ -1,6 +1,5 @@
-FileSyncer is a small tool implemented in Java to synchronize the create/delete and change operations on a directory to a specified remote server 
-via SSH and HTTP protocols.
-You can use it to synchronize files between two machines. Have fun:-)
+FileSyncer is a small tool implemented in Java to synchronize the create/delete and change operations on a directory from one machine to the other
+machine via SSH and HTTP protocols. Have fun:-)
 
 Constraints:
 1. Currently only support linux-to-linux.
