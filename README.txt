@@ -17,4 +17,5 @@ java -jar FileSyncer.jar directory_you_want_to_synchronize user@server
 
 2. HTTP version
 You can build the server and client from source in http directory by running make in the corresponding directories.
+The destination of the synchronized files resides in FileSyncer/http/server/webapps/repos.
 
