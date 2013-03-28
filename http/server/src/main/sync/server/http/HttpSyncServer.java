@@ -54,11 +54,23 @@ public class HttpSyncServer {
 	}
 	
 	public static void main(String[] args) {
+		if(args.length < 2) {
+			System.err.println("Illegal argument number!");
+			System.out.println("Usage: mvn exec:java -Dexec.mainClass=sync.server.http.HttpSyncServer host port");
+
+			return;
+		}
+		String host = args[0];
+		int port = Integer.parseInt(args[1]);
+		System.out.println("host = " + host + ", port = " + port);
+
 		Server server = new Server();
 		
 		SelectChannelConnector scc = new SelectChannelConnector();
-		scc.setHost(HttpServerSetting.getProperty("server.host"));
-		scc.setPort(Integer.parseInt(HttpServerSetting.getProperty("server.port")));
+		//scc.setHost(HttpServerSetting.getProperty("server.host"));
+		//scc.setPort(Integer.parseInt(HttpServerSetting.getProperty("server.port")));
+		scc.setHost(host);
+		scc.setPort(port);
 		scc.setRequestHeaderSize(8192);
 		int maxIdleTime = Integer.parseInt(HttpServerSetting.getProperty("server.idletime.max"));
 		scc.setMaxIdleTime(maxIdleTime);
