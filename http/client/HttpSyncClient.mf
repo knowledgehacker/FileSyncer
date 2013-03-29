@@ -1,5 +1,0 @@
-Manifest-Version: 1.0
-Created-By: 1.6.0_18 (Sun Microsystems Inc.)
-Main-Class: main.sync.client.http.HttpSyncClient
-Class-Path: lib/commons-logging-1.1.1.jar lib/commons-vfs2-2.0.jar
-

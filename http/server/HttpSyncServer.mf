@@ -1,4 +1,0 @@
-Manifest-Version: 1.0
-Created-By: 1.6.0_22 (Sun Microsystems Inc.)
-Main-Class: main.sync.server.http.HttpSyncServer
-Class-Path: webapps/WEB-INF/lib/servlet-api-3.0.jar webapps/WEB-INF/lib/jetty-util-8.1.9.v20130131.jar webapps/WEB-INF/lib/jetty-server-8.1.9.v20130131.jar webapps/WEB-INF/lib/jetty-servlet-8.1.9.v20130131.jar webapps/WEB-INF/lib/jetty-http-8.1.9.v20130131.jar webapps/WEB-INF/lib/jetty-io-8.1.9.v20130131.jar webapps/WEB-INF/lib/jetty-security-8.1.9.v20130131.jar webapps/WEB-INF/lib/jetty-continuation-8.1.9.v20130131.jar webapps/WEB-INF/lib/jetty-webapp-8.1.9.v20130131.jar webapps/WEB-INF/lib/jetty-xml-8.1.9.v20130131.jar
