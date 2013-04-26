@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Created-By: 1.6.0_22 (Sun Microsystems Inc.)
+Main-Class: test.sync.ssh.TestFileSyncer
+Class-Path: lib/commons-logging-1.1.1.jar lib/jsch-0.1.49.jar lib/commons-vfs2-2.0.jar
+
