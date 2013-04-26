@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!--
+This file describes the format that the configuration file used for server setting should conform to.
+The configuration file used for server setting allows for specifying some parameters for the server and context. 
+Sample settings:
+<Setting>
+	<Parameters>
+		<Parameter>
+			<name>host</name>
+			<value>192.168.222.247</value>
+		</Parameter>
+		<Parameter>
+			<name>port</name>
+			<value>8099</value>
+		</Parameter>
+		<Parameter>
+			<name>threadpool.size</name>
+			<value>1000</value>
+		</Parameter>
+	</Parameter>
+
+	<Context name="syncOpContext">
+		<Servlets>
+			<Servlet>
+				<class>connectServelt</class>
+				<path>/index.html</path>
+			</Servlet>
+			<Servlet>
+				<class>syncOpServlet</class>
+				<path>/repos/*</path>
+			</Servlet>
+		</Servlets>
+	</Conetxt>
+</Setting>
+-->
+
+<!ELEMENT Setting (Parameters* Context?)>
+<!ELEMENT Parameters (Parameter+)>
+<!ELEMENT Parameter (name, value)>
+<!ELEMENT Context (Servlets?)>
+<!ELEMENT Servlets (Servlet+)>
+<!ELEMENT Servlet (class, path)>
+
