@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>lib</groupId>
+  <artifactId>jetty-http</artifactId>
+  <versioning>
+    <versions>
+      <version>9.0.4-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20130606022630</lastUpdated>
+  </versioning>
+</metadata>

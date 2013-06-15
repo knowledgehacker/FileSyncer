@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>lib</groupId>
+  <artifactId>spdy-core</artifactId>
+  <versioning>
+    <versions>
+      <version>9.0.4-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20130606022634</lastUpdated>
+  </versioning>
+</metadata>

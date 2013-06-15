@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata modelVersion="1.1.0">
+  <groupId>lib</groupId>
+  <artifactId>jetty-servlet</artifactId>
+  <version>9.0.4-SNAPSHOT</version>
+  <versioning>
+    <snapshot>
+      <timestamp>20130606.022632</timestamp>
+      <buildNumber>1</buildNumber>
+    </snapshot>
+    <lastUpdated>20130606022632</lastUpdated>
+    <snapshotVersions>
+      <snapshotVersion>
+        <extension>jar</extension>
+        <value>9.0.4-20130606.022632-1</value>
+        <updated>20130606022632</updated>
+      </snapshotVersion>
+      <snapshotVersion>
+        <extension>pom</extension>
+        <value>9.0.4-20130606.022632-1</value>
+        <updated>20130606022632</updated>
+      </snapshotVersion>
+    </snapshotVersions>
+  </versioning>
+</metadata>
