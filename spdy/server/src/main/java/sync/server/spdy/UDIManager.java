@@ -35,6 +35,10 @@ import java.util.HashMap;
 import org.eclipse.jetty.spdy.api.Stream;
 import org.eclipse.jetty.spdy.api.HeadersBlock;
 
+import spdy.api.common.SpdyHttpHeader;
+import spdy.api.common.SpdyHttpHeaderFactory;
+import spdy.api.common.StreamUtils;
+
 /*
  * User Device Information Manager.
  */
@@ -43,62 +47,106 @@ public class UDIManager {
 	public static final int USERNAME_PASSWORD_NOT_MATCH = 2;
 	public static final int DEVICE_NOT_EXIST = 3;
 	public static final int DEVICE_ALREADY_EXIST = 4;
+	
+	public static final short PUT_OP = 1;
+	public static final short DELETE_OP = 2;
 
 	private static final Map<String, UDI> uis = new HashMap<String, UDI>();
+
+	// Just for test, add a ficitious device before any device connects to the sever
+	static {
+		/*
+		String userName = "ml";
+		String password = "123";
+		String deviceId = "YYY";
+		UDI udi = new UDI(password);
+		udi.add(deviceId);
+		uis.put(userName, udi);
+
+		UDI.DI di = udi.get(deviceId);
+		UDI.DI.SyncInfo si1 = new UDI.DI.SyncInfo("PUT", "ficitious/server_1.txt");
+		UDI.DI.SyncInfo si2 = new UDI.DI.SyncInfo("PUT", "ficitious/server_2.txt");
+		di.addSyncFile(si1);
+		di.addSyncFile(si2);
+		*/
+	}
 
 	/*
 	 * If user "userName" doesn't exist, create a UDI instance for it.
      */
-	public static synchronized int auth(String userName, String password, String deviceId, 
-			short spdyVersion, Stream stream, HeadersBlock headers) {
+	public static synchronized int auth(String userName, String password, String deviceId) {
 		UDI udi = uis.get(userName);
 		if(udi == null) {
 			udi = new UDI(password);
-			udi.add(deviceId, spdyVersion, stream, headers);
+			udi.add(deviceId);
 			uis.put(userName, udi);
 			// create a directory for user "userName"
 			File root = new File(ServerSettings.REPOSITORY, userName);
-			root.mkdir();
+			if(!root.exists())
+				root.mkdir();
 
 			return USER_NOT_EXIST;
 		}else {
 			if(!password.equals(udi.getPassword()))
 				return USERNAME_PASSWORD_NOT_MATCH;
 			else {
-				if(!udi.exists(deviceId))
+				if(!udi.exists(deviceId)){
+					udi.add(deviceId);
+					
 					return DEVICE_NOT_EXIST;
-				else
+				}else
 					return DEVICE_ALREADY_EXIST;
 			}
 		}
 	}
 	
-	public static synchronized void syncToServer(String userName, String deviceId, String file) {
+	public static synchronized void syncToServer(String userName, String deviceId, String file, boolean isDir, String method) {
+		//System.out.println("UDIManager.syncToServer: method = " + method);
 		UDI udi = uis.get(userName);
-		UDI.DI di = udi.getDIS().get(deviceId);
-		Vector<String> syncFiles = di.getSyncFiles();
-		syncFiles.add(file);
+		UDI.DI di = udi.get(deviceId);
+		di.addSyncFile(new UDI.DI.SyncInfo(method, file, isDir));
 	}
 
 	// synchronize files from device "deviceid" of user "userName" to server 
-	public static synchronized void syncToServer(String userName, String deviceId, Vector<String> files) {
-		UDI ui = uis.get(userName);
-		UDI.DI di = ui.getDIS().get(deviceId);
-		Vector<String> syncFiles = di.getSyncFiles();
-		syncFiles.addAll(files);
+	public static synchronized void syncToServer(String userName, String deviceId, Vector<UDI.DI.SyncInfo> files) {
+		UDI udi = uis.get(userName);
+		UDI.DI di = udi.get(deviceId);
+		di.addSyncFiles(files);
 	}
 
-	// synchronize files from other devices to device "deviceid" of user "userName"
-	public static synchronized void syncToDevice(String userName, String deviceId) {
-		UDI ui = uis.get(userName);
-		Map<String, UDI.DI> dis = ui.getDIS();
+	// synchronize files from other devices to device "deviceId" of user "userName"
+	public static synchronized void syncToDevice(String userName, String deviceId, short spdyVersion, Stream stream, HeadersBlock headers) {
+		SpdyHttpHeader spdyHttpHeader = SpdyHttpHeaderFactory.getInstance(spdyVersion);
+		String methodName = spdyHttpHeader.getMethod();
+		
+		UDI udi = uis.get(userName);
+		UDI.DI di = udi.get(deviceId);
+		Map<String, Integer> syncPoints = di.getSyncPoints();
+		
+		Map<String, UDI.DI> dis = udi.getDIS();
 		Set<Map.Entry<String, UDI.DI>> entries = dis.entrySet();
 		for(Map.Entry<String, UDI.DI> entry: entries) {
 			String key = entry.getKey();
 			UDI.DI value = entry.getValue();
 			if(!key.equals(deviceId)) {
-				Vector<String> syncFiles = value.getSyncFiles();
-				value.push(key, syncFiles);
+				Vector<UDI.DI.SyncInfo> syncFiles = value.getSyncFiles();
+				if(syncPoints.containsKey(key)) {
+					int syncPoint = syncPoints.get(key);
+					int syncFileNum = syncFiles.size();
+					for(int i = syncPoint; i < syncFileNum; ++i) {
+						UDI.DI.SyncInfo si = syncFiles.get(i);
+						
+						String method = si.getMethod();
+						headers.add(methodName, method);
+						String isDir = (si.isDir() == true) ? "true" : "false";
+						/* 
+						 * Remember all headers in SPDY should be lower-case. 
+						 * So we should use "isdir" instead of "isDir" here.
+						 */
+						headers.add("isdir", isDir);
+						StreamUtils.push(spdyVersion, stream, headers, si.getPath());
+					}
+				}
 			}
 		}
 	}

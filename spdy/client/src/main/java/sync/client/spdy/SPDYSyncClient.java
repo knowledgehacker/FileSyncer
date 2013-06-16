@@ -26,17 +26,25 @@
 
 package sync.client.spdy;
 
+import java.io.Console;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import java.io.IOException;
+
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.spdy.api.SPDY;
 
 import sync.client.FileSyncOps;
 import sync.client.SyncClient;
-import sync.client.spdy.LoginUI;
+//import sync.client.spdy.LoginUI;
 
 import spdy.api.client.SPDYClientHelper;
 
 public class SPDYSyncClient extends SyncClient {
-	private LoginUI loginUI;
+	//private LoginUI loginUI;
+	private String userName;
+	private String password;
+	private String deviceId;
 	
 	private final short spdyVersion;
 	private final String hostname;
@@ -52,14 +60,11 @@ public class SPDYSyncClient extends SyncClient {
 		this.port = port;
 
 		helper = new SPDYClientHelper(spdyVersion, threadpool);
-        helper.createSPDYClient();
-        
         isConnected = false;
 	}
 
 	public boolean connect() {
-        long idleTimeout = 3600*1000;
-        helper.connect(hostname, port, idleTimeout);
+        helper.connect(hostname, port, SPDYClientSettings.IDLE_TIMEOUT);
         
 		// TODO: check whether connect successfully
         isConnected = true;
@@ -76,20 +81,57 @@ public class SPDYSyncClient extends SyncClient {
 			// TODO: throw an exception
 		}
 
-		return new FileSyncOpsOverSPDY(helper, loginUI.getUserName(), loginUI.getDeviceId());
+		//return new FileSyncOpsOverSPDY(helper, loginUI.getUserName(), loginUI.getDeviceId());
+		return new FileSyncOpsOverSPDY(helper, userName, deviceId);
 	}
 
 	public boolean login() {
-		loginUI = new LoginUI(spdyVersion, hostname, port);
-		loginUI.show();
-		synchronized(LoginUI.syncObj) {
+		//loginUI = new LoginUI(spdyVersion, hostname, port);
+		//loginUI.show();
+		LoginUtils loginUtils = new LoginUtils(helper, spdyVersion, hostname, port);
+
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+       System.out.print("User name: ");
+       try {
+    	   userName = br.readLine();
+       } catch (IOException e) {
+    	   // TODO Auto-generated catch block
+    	   e.printStackTrace();
+        }
+      
+		/*
+       System.out.print("Password: ");
+       try {
+    	   password = br.readLine();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		*/
+		Console console = null;
+ 		char[] passwd;
+ 		if ((console = System.console()) != null &&(passwd = console.readPassword("%s", "Password: ")) != null) {
+			password = new String(passwd);
+     		java.util.Arrays.fill(passwd, ' ');
+ 		}
+       
+       System.out.print("Device id: ");
+		try {
+			deviceId = br.readLine();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		loginUtils.auth(userName, password, deviceId);
+		synchronized(LoginSyncObj.kick) {
 			try {
-				LoginUI.syncObj.wait();
+				LoginSyncObj.kick.wait();
 			}catch(InterruptedException ie) {
 				// TODO: handle exception "ie"
 			}
 		}
-		System.out.println("Wakeup from login!");
+		System.out.println("Login succeeded!");
 		
 		// TODO: check user authentication succeeds or fails
 		return true;
@@ -116,7 +158,7 @@ public class SPDYSyncClient extends SyncClient {
 		int port = Integer.parseInt(args[1]);
 		*/
 		
-		String hostname = System.getProperty("host");
+		String hostname = System.getProperty("hostname");
 		int port = Integer.parseInt(System.getProperty("port"));
 		
 		QueuedThreadPool threadpool = new QueuedThreadPool(200, 20);

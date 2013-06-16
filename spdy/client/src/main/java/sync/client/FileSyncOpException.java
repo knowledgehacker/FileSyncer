@@ -24,30 +24,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package sync.server.spdy;
+package sync.client;
 
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
+public class FileSyncOpException extends RuntimeException {
+	private static final long serialVersionUID = -7523391676791081216L;
 
-import org.eclipse.jetty.spdy.api.SPDY;
-import org.eclipse.jetty.spdy.api.server.ServerSessionFrameListener;
+	private String msg;
 
-import spdy.api.server.SPDYServerHelper;
-
-public class SPDYSyncServer {
-
-	public SPDYSyncServer() {
+	public FileSyncOpException(String msg) {
+		this.msg = msg;
 	}
-	
-	public static void main(String[] args) {
-		short spdyVersion = SPDY.V3;
 
-		String hostname = System.getProperty("hostname");
-		int port = Integer.parseInt(System.getProperty("port"));
-		SPDYServerHelper helper = new SPDYServerHelper(spdyVersion, hostname, port);
-
-		QueuedThreadPool threadpool = new QueuedThreadPool(200, 20);
-		ServerSessionFrameListener ssfl = new MySSFL(spdyVersion);
-		helper.createServer(threadpool, ssfl, ServerSettings.IDLE_TIMEOUT);
-		helper.start();
+	public String toString() {
+		return "FileSyncBaseOpsException: " + msg;
 	}
 }

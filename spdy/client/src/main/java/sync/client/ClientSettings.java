@@ -26,11 +26,12 @@
 
 package sync.client;
 
-import java.util.HashMap;
 import java.io.File;
+import java.util.HashMap;
 
 public class ClientSettings {
 	public static final String SYNC_DIR=System.getProperty("user.home") + File.separatorChar + "Sync";
+	
 	public static final String NEWLINE = System.getProperty("line.separator");
 	public static final String LOCALUSER = System.getProperty("user.name");
 

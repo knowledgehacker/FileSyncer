@@ -40,27 +40,28 @@ import org.eclipse.jetty.spdy.api.DataInfo;
 import org.eclipse.jetty.spdy.api.PushInfo;
 import org.eclipse.jetty.spdy.api.HeadersBlock;
 
+import spdy.api.common.Constants;
 import spdy.api.common.DataUtils;
 import spdy.api.common.SpdyHttpHeader;
 import spdy.api.common.SpdyHttpHeaderFactory;
 import spdy.api.client.SPDYClientHelper;
+import sync.client.FileStore;
 
-import sync.client.ClientSettings;
+//import sync.client.ClientSettings;
 
 public class LoginUtils {
+	private final SPDYClientHelper helper;
+
 	private final short spdyVersion;
 	private final String hostname;
 	private final int port;
-
-	private final String pathHeaderName;
 	
-	public LoginUtils(short spdyVersion, String hostname, int port) {
+	public LoginUtils(SPDYClientHelper helper, short spdyVersion, String hostname, int port) {
+		this.helper = helper;
+
 		this.spdyVersion = spdyVersion;
 		this.hostname = hostname;
 		this.port = port;
-		
-		SpdyHttpHeader spdyHttpHeader = SpdyHttpHeaderFactory.getInstance(spdyVersion);
-		pathHeaderName = spdyHttpHeader.getPath();
 	}
 	
 	public void auth(String userName, String password, String deviceId) {
@@ -80,10 +81,7 @@ public class LoginUtils {
 		
 		public void run() {
 			// Authenticate should use SSL, to improvement.
-			SPDYClientHelper helper = new SPDYClientHelper(spdyVersion);
-			helper.createSPDYClient();
-			long idleTimeout = 6000;
-			helper.connect(hostname, port, idleTimeout);
+			helper.connect(hostname, port, SPDYClientSettings.IDLE_TIMEOUT);
 
 			String path = "/login.html";
 			// TODO: generate a unique id to identify the device
@@ -96,9 +94,17 @@ public class LoginUtils {
 	}
 
 	private class MyPostStreamFrameListener extends StreamFrameListener.Adapter {
+		private final String methodName;
+		private final String pathName;
+		
+		public MyPostStreamFrameListener() {
+			SpdyHttpHeader spdyHttpHeader = SpdyHttpHeaderFactory.getInstance(spdyVersion);
+			methodName = spdyHttpHeader.getMethod();
+			pathName = spdyHttpHeader.getPath();
+		}
 
 		public void onReply(Stream stream, ReplyInfo replyInfo) {
-			System.out.println("MyPostStreamFrameListener.onReply...");
+			//System.out.println("MyPostStreamFrameListener.onReply...");
     	}
 
     	public void onData(Stream stream, DataInfo dataInfo) {
@@ -108,27 +114,55 @@ public class LoginUtils {
 			String charsetName = "UTF-8";
 			Charset charset = Charset.forName(charsetName);
 			String response = new String(data, charset);
-			System.out.println("response: " + response);
+			//System.out.println("response: " + response);
 
         	if(response.startsWith("login status:")) {
 				// notify SPDYSyncClient that "POST" request has been handled
-        		synchronized(LoginUI.syncObj) {
-        			LoginUI.syncObj.notify();
+        		synchronized(LoginSyncObj.kick) {
+        			LoginSyncObj.kick.notify();
         		}
         	}
     	}
     	
     	public StreamFrameListener onPush(Stream stream, PushInfo pushInfo) {
             HeadersBlock headers = pushInfo.getHeaders();
-            String path = headers.get(pathHeaderName);
+            String method = headers.get(methodName);
+            String path = headers.get(pathName);
+			boolean isDir = headers.get("isdir").equals("true") ? true : false;
+
+			String relPath = path.substring(1);
+            File resource = new File(Constants.PUSH_DST_ROOT_DIR, relPath);
+            System.out.println("LoginUtils.MyPostStreamFrameListener.onPush: resource = " + resource.getPath());
+            if(method.equals("DELETE")) {
+            	if(resource.exists())
+            		resource.delete();
+      
+            	return null;
+            }
             
-            File resource = new File(ClientSettings.SYNC_DIR, path);
+            if(!resource.exists()) {
+				if(isDir)
+            		resource.mkdirs();
+            	else {
+            		File parent = resource.getParentFile();
+            		if(!parent.exists())
+            			parent.mkdirs();
+
+				 	try {
+						resource.createNewFile();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+            	FileStore.add(relPath);
+              }
             return new MyPushStreamFrameListener(resource);
     	}
 	}
 	
 	public class MyPushStreamFrameListener extends StreamFrameListener.Adapter {
-		private static final int DEFAULT_BUFFER_SIZE = 4*1024;	// 4KB
+		private static final int DEFAULT_BUFFER_SIZE = 65536;	// 64KB
 
 		//private final File resource;
 		private FileOutputStream fos;
@@ -136,9 +170,10 @@ public class LoginUtils {
 		private int pos;
 
 		public MyPushStreamFrameListener(File resource) {
-			//this.resource = resource;
+			//this.resource = resource; 
+  
 			try {
-				fos = new FileOutputStream(resource);
+				fos = new FileOutputStream(resource, true);
 			}catch(FileNotFoundException fnfe) {
 				// TODO: handle exception "fnfe"
 			}
@@ -158,7 +193,8 @@ public class LoginUtils {
 	        dataInfo.consumeInto(data, pos, dataLength);
 	        pos += dataLength;
 	        if(dataInfo.isClose() == true) {
-				DataUtils.storeDataToFile(fos, data, pos);
+				if((pos > 0) && (pos <= DEFAULT_BUFFER_SIZE))
+					DataUtils.storeDataToFile(fos, data, pos);
 				try {
 					fos.close();
 				}catch(IOException ioe) {

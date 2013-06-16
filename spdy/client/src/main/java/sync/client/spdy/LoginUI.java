@@ -41,9 +41,9 @@ import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.SwingConstants;
 
+import spdy.api.client.SPDYClientHelper;
+
 public class LoginUI implements ActionListener {
-	public static final Object syncObj = new Object();
-	
 	private String userName;
 	private String password;
 	private String deviceId;
@@ -55,8 +55,8 @@ public class LoginUI implements ActionListener {
 	private final MyKeyListener pwdListener;
 	private final MyKeyListener diListener;
 	
-	public LoginUI(short spdyVersion, String hostname, int port) {
-		loginUtils = new LoginUtils(spdyVersion, hostname, port);
+	public LoginUI(SPDYClientHelper helper, short spdyVersion, String hostname, int port) {
+		loginUtils = new LoginUtils(helper, spdyVersion, hostname, port);
 
 		// label and textfield for user name
 		unListener = new MyKeyListener();

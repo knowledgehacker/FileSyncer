@@ -32,11 +32,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 
-import org.eclipse.jetty.spdy.api.Stream;
-import org.eclipse.jetty.spdy.api.HeadersBlock;
-
-import spdy.api.common.StreamUtils;
-
 /*
  * User Device Information
  */
@@ -59,8 +54,12 @@ public class UDI {
 		return dis;
 	}
 
-	public synchronized void add(String deviceId, short spdyVersion, Stream stream, HeadersBlock headers) {
-		DI di = new DI(devices, spdyVersion, stream, headers);
+	public synchronized DI get(String deviceId) {
+		return dis.get(deviceId);
+	}
+
+	public synchronized void add(String deviceId) {
+		DI di = new DI(devices);
 		devices.add(deviceId);
 		dis.put(deviceId, di);
 	}
@@ -81,39 +80,53 @@ public class UDI {
 	 * syncPoints records the last sync points of other devices(excluding this device).
 	 */
 	public static class DI {
-		private final Vector<String> mySyncFiles;
+		private final Vector<SyncInfo> mySyncFiles;
 		private final Map<String, Integer> syncPoints;
 		
-		private final short spdyVersion;
-		private final Stream stream;
-		private final HeadersBlock headers;
-
-		public DI(Set<String> devices, short spdyVersion, Stream stream, HeadersBlock headers) {
-			mySyncFiles = new Vector<String>();
+		public DI(Set<String> devices) {
+			mySyncFiles = new Vector<SyncInfo>();
 			syncPoints = new HashMap<String, Integer>();
 			for(String device: devices)
 				syncPoints.put(device, 0);
-			
-			this.spdyVersion = spdyVersion;
-			this.stream = stream;
-			this.headers = headers;
 		}
 
-		public Vector<String> getSyncFiles() {
+		public final Vector<SyncInfo> getSyncFiles() {
 			return mySyncFiles;
 		}
 
-		public Map<String, Integer> getSyncPoints() {
+		public final void addSyncFiles(Vector<SyncInfo> files) {
+			mySyncFiles.addAll(files);
+		}
+
+		public final void addSyncFile(SyncInfo file) {
+			mySyncFiles.add(file);
+		}
+
+		public final Map<String, Integer> getSyncPoints() {
 			return syncPoints;
 		}
 		
-		// push files "syncFiles" in device "deviceId" starting from index "syncPoints.get(deviceId)" 
-		public final void push(String deviceId, Vector<String> syncFiles) {
-			int syncFileNum = syncFiles.size();
-			int syncPoint = syncPoints.get(deviceId);
-			if(syncPoint < syncFileNum) {
-				StreamUtils.push(spdyVersion, stream, headers, syncFiles, syncPoint);
-				syncPoints.put(deviceId, syncFileNum);
+		public static class SyncInfo {
+			private final String method;
+			private final String path;
+			private final boolean isDir;
+			
+			public SyncInfo(String method, String path, boolean isDir) {
+				this.method = method;
+				this.path = path;
+				this.isDir = isDir;
+			}
+			
+			public final String getMethod() {
+				return method;
+			}
+			
+			public final String getPath() {
+				return path;
+			}
+
+			public final boolean isDir() {
+				return isDir;
 			}
 		}
 	}

@@ -26,6 +26,7 @@
 
 package sync.client;
 
+
 import org.apache.commons.vfs2.VFS;
 import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.FileListener;
@@ -83,24 +84,26 @@ public class MonitorTask implements FileListener {
 
     public void fileCreated(FileChangeEvent event) {
         /*
-         * fileObj actually is of type LocalFile.
-         * path is the absolute path of the file.
+        * fileObj actually is of type LocalFile.
+        * path is the absolute path of the file.
          */
-        FileObject fileObj = event.getFile();
-        String path = fileObj.getName().getPath();
-		synchronized(fbuffer) {
-			String relPath = path.substring(localDirLength+1);
-			System.out.println("relPath = " + relPath);
-        	fbuffer.add(new FileOp(relPath, FileOp.CREATE));
+       FileObject fileObj = event.getFile();
+       String path = fileObj.getName().getPath();
+       String relPath = path.substring(localDirLength+1);
+		if(!FileStore.removeIfPresent(relPath)) {
+			System.out.println("fileCreated: relPath = " + relPath);
+			synchronized(fbuffer) {
+				fbuffer.add(new FileOp(relPath, FileOp.CREATE));
+			}
 		}
     }
 
     public void fileDeleted(FileChangeEvent event) {
         FileObject fileObj = event.getFile();
         String path = fileObj.getName().getPath();
+		String relPath = path.substring(localDirLength+1);
 		synchronized(fbuffer) {
-			String relPath = path.substring(localDirLength+1);
-			System.out.println("relPath = " + relPath);
+			System.out.println("fileDeleted: relPath = " + relPath);
 	        fbuffer.add(new FileOp(relPath, FileOp.DELETE));
 		}
     }

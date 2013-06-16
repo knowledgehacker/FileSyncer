@@ -32,6 +32,7 @@ import org.eclipse.jetty.spdy.api.Stream;
 import org.eclipse.jetty.spdy.api.StreamFrameListener;
 import org.eclipse.jetty.spdy.api.DataInfo;
 import org.eclipse.jetty.spdy.api.HeadersBlock;
+import org.eclipse.jetty.spdy.api.RequestHeadersBlock;
 
 import spdy.api.common.StreamUtils;
 
@@ -39,14 +40,18 @@ public class MySPSFL extends StreamFrameListener.Adapter {
 	private static final int DEFAULT_BUFFER_SIZE = 65536;
 
 	private final short spdyVersion;
-	private final HeadersBlock headers;
+	private final String scheme;
+	private final String hostname;
+	private final int port;
 	//private final File resource;
 	private byte[] data;
 	private int pos;
 
-	public MySPSFL(short spdyVersion, HeadersBlock headers) {
+	public MySPSFL(short spdyVersion, String scheme, String hostname, int port) {
 		this.spdyVersion = spdyVersion;
-		this.headers = headers;
+		this.scheme = scheme;
+		this.hostname = hostname;
+		this.port = port;
 		//this.resource = resource;
 
 		data = new byte[DEFAULT_BUFFER_SIZE];
@@ -64,12 +69,9 @@ public class MySPSFL extends StreamFrameListener.Adapter {
 			String userName = upd.getUserName();
 			String password = upd.getPassword();
 			String deviceId = upd.getDeviceId();
-			//System.out.println("username: " + userName);
-			//System.out.println("password: " + password);
-			//System.out.println("deviceid: " + deviceId);
 
 			String response = "login status: ";
-			int result = UDIManager.auth(userName, password, deviceId, spdyVersion, stream, headers);	
+			int result = UDIManager.auth(userName, password, deviceId);	
 			switch(result) {
 				case UDIManager.USERNAME_PASSWORD_NOT_MATCH:
 					// authenticate failed
@@ -87,7 +89,8 @@ public class MySPSFL extends StreamFrameListener.Adapter {
 					response += "needs sync from other devices, starts...";
 					StreamUtils.sendData(stream, response, false);
 					
-					UDIManager.syncToDevice(userName, deviceId);
+					HeadersBlock headers = new RequestHeadersBlock(spdyVersion, scheme, hostname, port);
+					UDIManager.syncToDevice(userName, deviceId, spdyVersion, stream, headers);
 					
 					// TODO: listens on sync operations, push files sync from other devices immediately
 					break;

@@ -34,7 +34,7 @@ import spdy.api.client.SPDYClientHelper;
 
 import sync.client.ClientSettings;
 import sync.client.FileSyncOps;
-import sync.client.FileSyncBaseOpsException;
+import sync.client.FileSyncOpException;
 
 public class FileSyncOpsOverSPDY extends FileSyncOps {
 	private final SPDYClientHelper helper;
@@ -54,7 +54,7 @@ public class FileSyncOpsOverSPDY extends FileSyncOps {
 		return '/' + path + "?userName=" + userName + "&deviceId=" + deviceId + "&isDir=" + (isDir ? "true" : "false");
 	}
 
-	private final void create(String path, boolean isDir) throws FileSyncBaseOpsException {	
+	private final void create(String path, boolean isDir) throws FileSyncOpException {	
 		String fatPath = decoratePath(path, isDir);
 		MyPutStreamFrameListener sfl = new MyPutStreamFrameListener(path, isDir);
 		Stream stream = helper.createStream("PUT", fatPath, sfl);
@@ -70,39 +70,30 @@ public class FileSyncOpsOverSPDY extends FileSyncOps {
 		}
 	}
 	
-	private final void remove(String path, boolean isDir) {
-		String fatPath = decoratePath(path, isDir);
-		MyDeleteStreamFrameListener sfl = new MyDeleteStreamFrameListener(path, isDir);
-		helper.createStream("DELETE", fatPath, sfl);		
-	}
-
-	public void createFile(String path) throws FileSyncBaseOpsException {
+	public void createFile(String path) throws FileSyncOpException {
 		System.out.println("createFile starts ...");
 		create(path, false);
 	}
 
-	public void upgradeFile(String path) throws FileSyncBaseOpsException {
+	public void upgradeFile(String path) throws FileSyncOpException {
 		System.out.println("upgradeFile starts ...");
 		// TO IMPROVE: only update the part of the file changed
 		create(path, false);
 	}
 
-	public void mkdir(String path) throws FileSyncBaseOpsException {
+	public void mkdir(String path) throws FileSyncOpException {
 		System.out.println("mkdir starts ...");
 		create(path, true);	
 	}
 	
-	public void deleteFile(String path) throws FileSyncBaseOpsException {
-		System.out.println("deleteFile starts ...");
-		remove(path, false);
-	}
-	
-	public void rmdir(String path) throws FileSyncBaseOpsException {
-		System.out.println("rmdir starts");
-		remove(path, true);
+	public void delete(String path) throws FileSyncOpException {
+		System.out.println("delete starts");
+		String fatPath = '/' + path + "?userName=" + userName + "&deviceId=" + deviceId;
+		MyDeleteStreamFrameListener sfl = new MyDeleteStreamFrameListener(path);
+		helper.createStream("DELETE", fatPath, sfl);
 	}
 /*
-	public boolean exists(String relPath) throws FileSyncBaseOpsException {
+	public boolean exists(String relPath) throws FileSyncOpException {
 		System.out.println("exists starts ...");
 
 		return res;

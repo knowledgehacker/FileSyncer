@@ -24,18 +24,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package sync.client;
+package sync.client.spdy;
 
-public class FileSyncBaseOpsException extends RuntimeException {
-	private static final long serialVersionUID = -7523391676791081216L;
-	
-	private String msg;
-
-	public FileSyncBaseOpsException(String msg) {
-		this.msg = msg;
-	}
-
-	public String toString() {
-		return "FileSyncBaseOpsException: " + msg;
-	}
+public class LoginSyncObj {
+	public static final Object kick = new Object();
 }

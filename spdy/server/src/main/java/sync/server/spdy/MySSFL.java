@@ -44,7 +44,7 @@ import spdy.api.server.ServerPutStreamFrameListener;
 
 public class MySSFL extends MTServerSessionFrameListener {
 	private final Logger LOG = Log.getLogger(MySSFL.class);
-
+	
 	public MySSFL(short spdyVersion) {
 		super(spdyVersion);
 	}
@@ -60,51 +60,61 @@ public class MySSFL extends MTServerSessionFrameListener {
 			// Send back reply
 			StreamUtils.sendReply(spdyVersion, stream, HeadersBlock.HTTP_STATUS_OK, false);
 			
-			return new MySPSFL(spdyVersion, headers);
+			String scheme = headers.get(spdyHttpHeader.getScheme());
+			String host = headers.get(spdyHttpHeader.getHost());
+			int colon = host.indexOf(':');
+			String hostname = host.substring(0, colon);
+			int port = Integer.parseInt(host.substring(colon+1));
+			return new MySPSFL(spdyVersion, scheme, hostname, port);
 		}else
 			return null;
 	}
 	
 	// Handle create file operation, query string "userName=xxx&deviceId=xxx&isDir=false"
 	protected StreamFrameListener handlePutRequest(Stream stream, SynInfo synInfo) {
-		SpdyHttpHeader spdyHttpHeader = SpdyHttpHeaderFactory.getInstance(spdyVersion);
+		 SpdyHttpHeader spdyHttpHeader = SpdyHttpHeaderFactory.getInstance(spdyVersion);
         HeadersBlock headers = synInfo.getHeaders();
         String path = headers.get(spdyHttpHeader.getPath());
         LOG.info("handlePutRequest - path: " + path);
 
-		StreamUtils.sendReply(spdyVersion, stream, HeadersBlock.HTTP_STATUS_OK, true);
+		 StreamUtils.sendReply(spdyVersion, stream, HeadersBlock.HTTP_STATUS_OK, true);
 
         UDT udt = parse(path);
         String userName = udt.getUserName();
         String deviceId = udt.getDeviceId();
+		boolean isDir = udt.isDir();
         String realPath = path.substring(0, path.indexOf('?'));
-        UDIManager.syncToServer(userName, deviceId, realPath);
-        /*
-		String userName = path.substring(path.indexOf('=')+1, path.indexOf('&'));
-		boolean isDir = path.substring(path.lastIndexOf('=')+1).equals("true") ? true : false;
-		*/
+        UDIManager.syncToServer(userName, deviceId, realPath, isDir, "PUT");
+        
         File resource = new File(ServerSettings.REPOSITORY + File.separatorChar + userName + realPath);
-        boolean isDir = udt.isDir();
-		if(isDir) {
-			if(!resource.exists())
-				resource.mkdir();
+		 if(isDir) {
+			 if(!resource.exists())
+				 resource.mkdir();
 			
-			// client sends some meaningless data to put stream in half-closed state, server discard the data simply
-			return null;
-		}else
-			return new ServerPutStreamFrameListener(resource);
-	}
+			 // client sends some meaningless data to put stream in half-closed state, server discard the data simply
+			 return null;
+		 }else
+		 	 return new ServerPutStreamFrameListener(resource);
+    }
 	
-	// Handle delete file operation, query string "userName=xxx&deviceId=xxx&isDir=false"
+	// Handle delete file operation, query string "userName=xxx&deviceId=xxx"
 	protected StreamFrameListener handleDeleteRequest(Stream stream, SynInfo synInfo) {
 		SpdyHttpHeader spdyHttpHeader = SpdyHttpHeaderFactory.getInstance(spdyVersion);
         HeadersBlock headers = synInfo.getHeaders();
         String path = headers.get(spdyHttpHeader.getPath());
         LOG.info("handleDeleteRequest - path: " + path);
 
-        String userName = path.substring(path.indexOf('=')+1, path.indexOf('&'));
+        UDT udt = parse(path);
+        String userName = udt.getUserName();
+        String deviceId = udt.getDeviceId();
+        String realPath = path.substring(0, path.indexOf('?'));
+        UDIManager.syncToServer(userName, deviceId, realPath, false, "DELETE");	// parameter "isDir" here will be ignored by caller
+        
+        //String userName = path.substring(path.indexOf('=')+1, path.indexOf('&'));
         File resource = new File(ServerSettings.REPOSITORY + File.separatorChar + userName
         		+ path.substring(0, path.indexOf('?')));
+		System.out.println("resource: " + resource.getPath());
+
 		if(resource.exists())
 			resource.delete();
 		StreamUtils.sendReply(spdyVersion, stream, HeadersBlock.HTTP_STATUS_OK, true);
@@ -138,7 +148,7 @@ public class MySSFL extends MTServerSessionFrameListener {
 				deviceId = value;
 			else if(key.equals("isDir"))
 				isDir = value.equals("true") ? true : false;
-			
+
 			start = end+1;
 			end = queryStr.indexOf('&', start);
 		}

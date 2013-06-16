@@ -27,11 +27,14 @@
 package sync.client;
 
 public class FileOp {
+	public static final short DIR = 0;
+	public static final short FILE = 1;
+
 	public static final short CREATE = 0;
 	public static final short DELETE = 1;
-
-	private String relPath;
-	private short op;
+	
+	private final String relPath;
+	private final short op;
 
 	public FileOp(String relPath, short op) {
 		this.relPath = relPath;
@@ -41,7 +44,7 @@ public class FileOp {
 	public final String getRelPath() {
 		return relPath;
 	}
-
+	
 	public final short getOp() {
 		return op;
 	}

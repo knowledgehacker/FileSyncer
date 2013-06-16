@@ -34,38 +34,32 @@ import java.util.Vector;
  * thread-safety if the Pair component will be accessed by multiple threads.
  */
 public class FileDoubleBuffer {
-
-    //private Object syncObj;
-	private Vector<FileOp> inFiles;
-	private Vector<FileOp> outFiles;
+	private Vector<FileOp> inFops;
+	private Vector<FileOp> outFops;
 
 	public FileDoubleBuffer() {
-		//syncObj = new Object();
-		inFiles = new Vector<FileOp>();
-		outFiles = new Vector<FileOp>();
+		inFops = new Vector<FileOp>();
+		outFops = new Vector<FileOp>();
 	}
 
 	/**
 	 * The following methods operate on inFiles before inFiles and outFiles are swapped each run.
 	 */
 	public final void add(FileOp fop) {
-		//synchronized(syncObj) {
-			inFiles.add(fop);
-		//}
+		inFops.add(fop);
 	}	
 
 	public final boolean empty() {
-		//synchronized(syncObj) {
-			return inFiles.isEmpty();
-		//}
+		return inFops.isEmpty();
 	}
 
 	public final void swap() {
-		//synchronized(syncObj) {
-			Vector<FileOp> tmp = inFiles;
-			inFiles = outFiles;
-			outFiles = tmp;
-		//}
+		Vector<FileOp> tmp = inFops;
+		inFops = outFops;
+		outFops = tmp;
+
+		// Why clear inFops here doesn't work?
+		//inFops.clear();
 	}
 
 	/**
@@ -74,6 +68,6 @@ public class FileDoubleBuffer {
 	 * But it will introduce copy overhead, since we it is used internally, we choose to return reference here.
 	 */
 	public final Vector<FileOp> get() {
-		return outFiles;
+		return outFops;
 	}
 }

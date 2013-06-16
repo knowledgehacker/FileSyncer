@@ -31,18 +31,20 @@ import org.eclipse.jetty.spdy.api.StreamFrameListener;
 import org.eclipse.jetty.spdy.api.ReplyInfo;
 
 public class MyPutStreamFrameListener extends StreamFrameListener.Adapter {
-    private final String path;
-	private final boolean isDir;
+	//private final String path;
+	//private final boolean isDir;
 
     public MyPutStreamFrameListener(String path, boolean isDir) {
-        this.path = path;
-		this.isDir = isDir;
+       //this.path = path;
+		//this.isDir = isDir;
     }
 
     public void onReply(Stream stream, ReplyInfo replyInfo) {
+    	/*
 		if(isDir)
-			System.out.println("Directory " + path + "has been put to remote server.");
+			System.out.println("Directory " + path + " put.");
 		else
-			System.out.println("File " + path + "has been put to remote server.");
+			System.out.println("File " + path + " put.");
+		*/
     }
 }

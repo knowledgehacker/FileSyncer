@@ -32,7 +32,8 @@ import java.util.HashMap;
 public final class ServerSettings {
 	public static final String REPOSITORY = System.getProperty("user.dir") 
 		+ File.separatorChar + "webapps" + File.separatorChar + "repos";
-
+	public static final long IDLE_TIMEOUT = 3600*1000;	// one hour
+	
 	private static HashMap<String, String> settings;
 
 	static {

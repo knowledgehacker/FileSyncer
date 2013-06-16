@@ -28,12 +28,13 @@ package sync.client;
 
 import java.util.Date;
 import java.util.Vector;
+import java.util.Set;
 import java.io.File;
 
 /**
  * Synchronized file operations such as upload, add/remove, and update to remote server.
  */
-public abstract class FileSyncOps extends FileSyncBaseOps {
+public abstract class FileSyncOps {
 	private final String root = ClientSettings.SYNC_DIR;
 
 	// Record the files changed each run of update.
@@ -65,9 +66,9 @@ public abstract class FileSyncOps extends FileSyncBaseOps {
 	public void addFile(String relPath) {
 		try{
 			createFile(relPath);
-		}catch(FileSyncBaseOpsException fsboe) {
+		}catch(FileSyncOpException fsoe) {
 			System.out.println("add: Create remote file " + relPath 
-				+ " failed - " + fsboe);
+				+ " failed - " + fsoe);
 			return;
 		}
 		System.out.println("File \"" + relPath + "\" created.");
@@ -80,9 +81,9 @@ public abstract class FileSyncOps extends FileSyncBaseOps {
 	public void addDir(String relPath, boolean recursive) {
 		try{
 			mkdir(relPath);
-		}catch(FileSyncBaseOpsException fsboe) {
+		}catch(FileSyncOpException fsoe) {
 			System.out.println("add: Create remote directory " + relPath 
-				+ " failed - " + fsboe);
+				+ " failed - " + fsoe);
 			return;
 		}
 		System.out.println("Directory \"" + relPath + "\" created.");
@@ -104,21 +105,36 @@ public abstract class FileSyncOps extends FileSyncBaseOps {
 	}
 
 	/**
+	 * Remove file or directory "relPath" in remote server
+	 */
+	public void remove(String relPath) {
+		try{
+			delete(relPath);
+		}catch(FileSyncOpException fsoe) {
+           System.out.println("removeFile: Remove remote file " + relPath
+                + " failed - " + fsoe);
+		}
+	}
+	
+	/**
 	 * Remove the file "relPath" in remote server.
 	 */
+	/*
 	public void removeFile(String relPath) {
 		try{
 			deleteFile(relPath);
-		}catch(FileSyncBaseOpsException fsboe) {
+		}catch(FileSyncOpException fsoe) {
            System.out.println("removeFile: Remove remote file " + relPath
-                + " failed - " + fsboe);
+                + " failed - " + fsoe);
 		}
 	}
+	*/
 
 	/**
 	 * Remove the directory "relPath" in remote server.
 	 * Remove all directories/files in "relPath" recursively if passing true as "recursive".
 	 */
+	/*
 	public void removeDir(String relPath, boolean recursive) {
 		if(recursive) {
 			File dir = new File(relPath);
@@ -137,28 +153,32 @@ public abstract class FileSyncOps extends FileSyncBaseOps {
 
 		try{
 			rmdir(relPath);
-		}catch(FileSyncBaseOpsException fsboe) {
+		}catch(FileSyncOpException fsoe) {
            System.out.println("removeDir: Remove remote directory " + relPath
-                + " failed - " + fsboe);
+                + " failed - " + fsoe);
 		}
 	}
+	*/
 	
 	/**
-	 * Update all the directories or files modified since last update in "root".
-	 * As to adding/removing the directories/files, call "addFile/Dir" or "removeFile/Dir" instead.
+	 * Update all the directories or files modified since last check in "root".
+	 * The last modified time of the files created since last check will be smaller than the last check time.
+	 * So I pass the list of files created since last check here.
 	 */ 
-	public Vector<String> update(Date timestamp) {
+	public Vector<String> update(Date timestamp, Set<String> filesCreated) {
 		changedFiles.clear();
 
 		File dir = new File(root);
 		File[] dfs = dir.listFiles();
 		for(int i = 0; i < dfs.length; ++i) {
 			File df = dfs[i];
-			if(df.isFile())
-				updateFile(df.getName(), timestamp);
+			if(df.isFile()) {
+				String fileName = df.getName();
+				updateFile(fileName, timestamp, filesCreated);
+			}
 
 			if(df.isDirectory())
-				updateDir(df.getName(), true, timestamp);
+				updateDir(df.getName(), true, timestamp, filesCreated);
 		}
 
 		return changedFiles;
@@ -167,15 +187,19 @@ public abstract class FileSyncOps extends FileSyncBaseOps {
 	/**
 	 * Update the file "relPath" in remote server.
 	 */
-	private void updateFile(String relPath, Date timestamp) {
+	private void updateFile(String relPath, Date timestamp, Set<String> filesCreated) {
+		if(filesCreated.contains(relPath))
+			return;
+
 		File file = new File(root, relPath);
 		long lastModifiedTime = file.lastModified();
-		if(lastModifiedTime <= timestamp.getTime())
+		if((lastModifiedTime <= timestamp.getTime()) 
+				|| FileStore.removeIfPresent(relPath))
 			return;
 
 		try {
 			upgradeFile(relPath);
-		}catch(FileSyncBaseOpsException fsboe) {
+		}catch(FileSyncOpException fsoe) {
 			System.out.println("updateFile: Update remote file " + relPath + " failed.");
 			return;
 		}
@@ -187,10 +211,11 @@ public abstract class FileSyncOps extends FileSyncBaseOps {
 	 * Update the directory "relPath" in remote server.
 	 * Update all directories/files in "relPath" recursively if passing true as "recursive".
 	 */
-	private void updateDir(String relPath, boolean recursive, Date timestamp) {
+	private void updateDir(String relPath, boolean recursive, Date timestamp, Set<String> filesCreated) {
 		File dir = new File(root, relPath);
 		long lastModifiedTime = dir.lastModified();
-		if(lastModifiedTime <= timestamp.getTime())
+		if((lastModifiedTime <= timestamp.getTime())
+			|| FileStore.removeIfPresent(relPath))
 			return;
 
 		if(recursive) {
@@ -200,11 +225,36 @@ public abstract class FileSyncOps extends FileSyncBaseOps {
 				String dfRelPath = relPath + File.separator + df.getName();
 				
 				if(df.isFile())
-					updateFile(dfRelPath, timestamp);
+					updateFile(dfRelPath, timestamp, filesCreated);
 
 				if(df.isDirectory())
-					updateDir(dfRelPath, true, timestamp);
+					updateDir(dfRelPath, true, timestamp, filesCreated);
 			}
 		}
 	}
+	
+	/**
+	 * Upgrade the file in relative path "relPath" to remote server.
+	 */
+    public abstract void upgradeFile(String relPath) throws FileSyncOpException;
+
+	/**
+	 * Create a directory "relPath" in remote server.
+	 */
+    public abstract void mkdir(String relPath) throws FileSyncOpException;
+	
+	/**
+	 * Create the file in relateive path "relPath" to remote server.
+	 */
+    public abstract void createFile(String relPath) throws FileSyncOpException;
+
+	/**
+	 * Delete the file or directory "relPath" in remote server.
+	 */
+    public abstract void delete(String relPath) throws FileSyncOpException;
+
+	/**
+	 * Check whether file or directory "relPath" exists in remote server or not.
+	 */
+    //public abstract boolean exists(String relPath) throws FileSyncOpException;
 }

@@ -28,6 +28,8 @@ package sync.client;
 
 import java.util.Date;
 import java.util.Vector;
+//import java.util.Set;
+//import java.util.HashSet;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -93,6 +95,10 @@ public abstract class SyncClient {
 	 * d. Start monitor task, and create log writer as well.
 	 */
 	public void initialize() {
+		File syncDir = new File(ClientSettings.SYNC_DIR);
+		if(!syncDir.exists())
+			syncDir.mkdir();
+
 		// login and user authentication
 		login();
 		
@@ -108,12 +114,12 @@ public abstract class SyncClient {
          */
         //syncOps.upload();
 
-		// start monitor task
-		startMonitorTask();
-
 		// create an log writer
 		logWriter = new LogWriter();
 		timestamp = new Date(logWriter.lastModified());
+
+		// start monitor task
+		startMonitorTask();
 	}
 
 	public void finalize() {
@@ -166,35 +172,19 @@ public abstract class SyncClient {
 			if(syncThread == null)
 				syncThread = Thread.currentThread();
 
-			String logMsg = "";
-			Vector<String> changedFiles = syncOps.update(timestamp);
-			if(!changedFiles.isEmpty()) {
-				int changedFileNum = changedFiles.size();
-				for(int i = 0; i < changedFileNum; ++i)
-					logMsg += "File " + changedFiles.get(i) + " changed."
-						+ ClientSettings.NEWLINE;
-			}
-
 			synchronized(fbuffer) {
-				if(fbuffer.empty()) {
-					// no file created or deleted, record the files changed in ".log.txt" and return
-					if(!logMsg.equals("")) {
-						logWriter.append(logMsg, false);
-						logWriter.append("updated", true);
-						
-						timestamp = new Date(logWriter.lastModified());
-					}
-					return;
-				}else
+				if(!fbuffer.empty()) 
 					fbuffer.swap();
 			}
-
+			
 			/**
-			 * We don't need to synchronize on FileDoubleBuffer.outFiles after FileDoubleBuffer.swap is called.
+		 	 * We don't need to synchronize on FileDoubleBuffer.outFiles after FileDoubleBuffer.swap is called.
 			 * Since it will only be accessed in the single monitor thread from then on each run.
 			 */
-			long fileAdded = 0;
+			String logMsg = "";
+			//Set<String> filesCreated = new HashSet<String>();
 
+			long fileAdded = 0;
 			Vector<FileOp> fops = fbuffer.get();
 			int fn = fops.size();
 			for(int i = 0; i < fn; ++i) {
@@ -203,6 +193,8 @@ public abstract class SyncClient {
 				File df = new File(ClientSettings.SYNC_DIR, relPath);
 				short op = fop.getOp();
 				if(op == FileOp.CREATE) {
+					//filesCreated.add(relPath);
+					
 					if(df.isFile())
 						syncOps.addFile(relPath);
 
@@ -215,26 +207,47 @@ public abstract class SyncClient {
 				}
 
 				if(op == FileOp.DELETE) {
-					if(df.isFile())
-						syncOps.addFile(relPath);
+					/*
+					if(fileType == FileOp.FILE) {
+						System.out.println("SyncClient: call syncOps.removeFile(" + relPath + ")");
+						syncOps.removeFile(relPath);
+					}
 
-					if(df.isDirectory())
+					if(fileType == FileOp.DIR)
 						syncOps.removeDir(relPath, true);
-						
+					*/
+					syncOps.remove(relPath);
+					
 					logMsg += "File " + relPath + " deleted."
 						+ ClientSettings.NEWLINE;
 					fileAdded -= 1;
 				}
 			}
-
 			fops.clear();
+
+			/*
+			 * Check modified files since last round.
+			 * But the implementation here doesn't work.
+			 * If some files are added after fbuffer is swapped, but before update begins.
+			 * These new files will be treated as modified ones, since they do not exist in filesCreated.
+			 * We don't handle files modified for the moment here.
+			 */
+			/*
+			Vector<String> changedFiles = syncOps.update(timestamp, filesCreated);
+			if(!changedFiles.isEmpty()) {
+				int changedFileNum = changedFiles.size();
+				for(int i = 0; i < changedFileNum; ++i)
+					logMsg += "File " + changedFiles.get(i) + " changed."
+						+ ClientSettings.NEWLINE;
+			}
+			*/
 
 			if(!logMsg.equals("")) {
 				logWriter.append(logMsg, false);
 				logWriter.append("updated", true);
-				
 				timestamp = new Date(logWriter.lastModified());
 			}
+			//timestamp = new Date();
 
 			// reschedule monitor and sync tasks if needed
 			rescheduleTasks(fileAdded);	

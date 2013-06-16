@@ -31,18 +31,13 @@ import org.eclipse.jetty.spdy.api.Stream;
 import org.eclipse.jetty.spdy.api.StreamFrameListener;
 
 public class MyDeleteStreamFrameListener extends StreamFrameListener.Adapter {
-    private final String path;
-	private final boolean isDir;
+    //private final String path;
 
-    public MyDeleteStreamFrameListener(String path, boolean isDir) {
-        this.path = path;
-		this.isDir = isDir;
+    public MyDeleteStreamFrameListener(String path) {
+        //this.path = path;
     }
 
     public void onReply(Stream stream, ReplyInfo replyInfo) {
-		if(isDir)
-			System.out.println("Directory " + path + "has been deleted in remote server.");
-		else
-			System.out.println("File " + path + "has been deleted in remote server.");
+		//System.out.println(path + " has been deleted in remote server.");
     }
 }
